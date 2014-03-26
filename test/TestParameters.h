@@ -66,7 +66,7 @@ T TestParameters<T>::getParameter( const std::string& parameterName )
 {
 	typename std::map<std::string,T>::const_iterator iFindResult=parameters_.find( parameterName );
 	if( iFindResult!=parameters_.end() ) return iFindResult->second;
-	throw std::runtime_error( "Invalid parameter name" );
+	throw std::invalid_argument( "TestParameters::getParameter(\""+parameterName+"\") - Invalid parameter name" );
 }
 
 template<class T>

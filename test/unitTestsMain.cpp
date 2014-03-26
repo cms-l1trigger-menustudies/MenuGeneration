@@ -49,9 +49,62 @@ void printUsage( const std::string& executableName, std::ostream& output=std::co
 			<< "\t" << "\t" << "runs the unit tests with input files named" << "\n"
 			<< "\n"
 			<< "\t" << executableName << " --help" << "\n"
-			<< "\t" << "\t" << "prints this help message"
+			<< "\t" << "\t" << "prints this help message" << "\n"
+			<< "\n"
+			<< "\t" << executableName << " --list" << "\n"
+			<< "\t" << "\t" << "prints a list of all the available unit tests" << "\n"
+			<< "\n"
+			<< "\t" << executableName << " --test <test name 1> [--test <test name 2>  ...]" << "\n"
+			<< "\t" << "\t" << "runs only the specified unit tests. Valid names can be found with the \"--list\" option."
 			<< "\n"
 			<< std::endl;
+}
+
+/** @brief Prints all of the tests that have been registered in the cppunit registry.
+ * @parameter output   Where to print the information */
+void printAvailableTests( std::ostream& output=std::cout )
+{
+	output << "You can use any of these names with the \"--test\" option to run a subset of the tests."
+			<< " If nothing is set the default is \"All Tests\"." << "\n"
+			<< "Available tests:" << std::endl;
+
+	CPPUNIT_NS::Test *pCurrentTest=CPPUNIT_NS::TestFactoryRegistry::getRegistry().makeTest();
+	std::vector< std::pair<CPPUNIT_NS::Test*,int> > stack;
+	while( pCurrentTest!=nullptr )
+	{
+		// Add some indentation according to the hierarchy level
+		for( size_t index=0; index<stack.size()+1; ++index ) output << "   ";
+		// Print the name of this test
+		output << pCurrentTest->getName() << std::endl;
+		// If the test has any children, set the first one as the element to process
+		// on the next loop. Also add this element to the stack so that I can come
+		// back to it later and process any other children.
+		if( pCurrentTest->getChildTestCount()>0 )
+		{
+			CPPUNIT_NS::Test *pChildTest=pCurrentTest->getChildTestAt(0);
+			// Second parameter is "1" because that's the index of the next child I
+			// want to try. A check on whether this is valid is made later.
+			stack.push_back( std::make_pair( pCurrentTest, 1 ) );
+			pCurrentTest=pChildTest;
+		}
+		// If this test has no children then I need to find the first element
+		// on the stack that has another child element left to process.
+		else
+		{
+			pCurrentTest=nullptr;
+			while( !stack.empty() && pCurrentTest==nullptr )
+			{
+				CPPUNIT_NS::Test *pParentTest=stack.back().first;
+				int& nextChildIndex=stack.back().second;
+				if( nextChildIndex < pParentTest->getChildTestCount() )
+				{
+					pCurrentTest=pParentTest->getChildTestAt(nextChildIndex);
+					++nextChildIndex;
+				}
+				else stack.pop_back();
+			}
+		}
+	}
 }
 
 /** @brief Parses the command line.
@@ -65,6 +118,8 @@ bool handleCommandLine( int argc, char* argv[] )
 {
 	l1menu::tools::CommandLineParser commandLineParser;
 	commandLineParser.addOption( "help", l1menu::tools::CommandLineParser::NoArgument );
+	commandLineParser.addOption( "list", l1menu::tools::CommandLineParser::NoArgument );
+	commandLineParser.addOption( "test", l1menu::tools::CommandLineParser::RequiredArgument );
 
 	try{ commandLineParser.parse( argc, argv ); }
 	catch( std::runtime_error& exception )
@@ -79,6 +134,25 @@ bool handleCommandLine( int argc, char* argv[] )
 		printUsage( commandLineParser.executableName() );
 		return false;
 	}
+
+	if( commandLineParser.optionHasBeenSet( "list" ) )
+	{
+		// Note that there is a call to TestFactoryRegistry::getRegistry().makeTest() in printAvailableTests()
+		// that constructs the tests, and the constructors need some parameters set in the TestParameters singleton.
+		// I don't care what the value of these are, just that they're set. I'm about to return false which will
+		// make the program quit, so the values are never used.
+		MutableTestParameters<std::string>::setParameter( "TEST_SAMPLE_FILENAME", "blah blah blah" );
+		MutableTestParameters<std::string>::setParameter( "TEST_MENU_FILENAME", "blah blah blah" );
+		printAvailableTests();
+		return false;
+	}
+
+	if( commandLineParser.optionHasBeenSet( "test" ) )
+	{
+		MutableTestParameters< std::vector<std::string> >::setParameter( "Tests to run", commandLineParser.optionArguments("test") );
+	}
+	// If no tests were specified, use a default of "All Tests"
+	else MutableTestParameters< std::vector<std::string> >::setParameter( "Tests to run", std::vector<std::string>(1,"All Tests") );
 
 	if( commandLineParser.nonOptionArguments().size()>2 )
 	{
@@ -129,11 +203,10 @@ int main( int argc, char* argv[] )
 		return -1;
 	}
 
-
 	// Create the event manager and test controller
 	CPPUNIT_NS::TestResult controller;
 
-	// Add a listener that colllects test result
+	// Add a listener that collects test result
 	CPPUNIT_NS::TestResultCollector result;
 	controller.addListener( &result );
 
@@ -141,9 +214,27 @@ int main( int argc, char* argv[] )
 	CPPUNIT_NS::BriefTestProgressListener progress;
 	controller.addListener( &progress );
 
-	// Add the top suite to the test runner
+	// Create a TestRunner and add the tests to it
 	CPPUNIT_NS::TestRunner runner;
-	runner.addTest( CPPUNIT_NS::TestFactoryRegistry::getRegistry().makeTest() );
+	// Get the main parent test and query it to get the tests that the user has asked for.
+	// The test names to run will have been set in the "Tests to run" parameter during
+	// handleCommandLine(). If the user has not specified anything then this vector will
+	// only contain "All Tests".
+	CPPUNIT_NS::Test *pMainTest=CPPUNIT_NS::TestFactoryRegistry::getRegistry().makeTest();
+	for( const auto& testName : TestParameters< std::vector<std::string> >::instance().getParameter("Tests to run") )
+	{
+		try
+		{
+			runner.addTest( pMainTest->findTest( testName ) );
+			std::cout << "Added \"" << testName << "\" to the list of tests to run." << std::endl;
+		}
+		catch( std::invalid_argument& error )
+		{
+			std::cerr << "\"" << testName << "\" appears to be an invalid name for a test. Use the \"--list\" option to see available tests." << std::endl;
+		}
+	}
+
+	//runner.addTest( CPPUNIT_NS::TestFactoryRegistry::getRegistry().makeTest() );
 	runner.run( controller );
 
 	// Print test in a compiler compatible format.
