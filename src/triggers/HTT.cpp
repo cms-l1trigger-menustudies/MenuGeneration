@@ -61,7 +61,7 @@ namespace l1menu
 			{
 				l1menu::TriggerTable& triggerTable=l1menu::TriggerTable::instance();
 				HTT_v0 tempTriggerInstance;
-				triggerTable.registerSuggestedBinning( tempTriggerInstance.name(), "threshold1", 100, 0, 800 );
+				triggerTable.registerSuggestedBinning( tempTriggerInstance.name(), "threshold1", 100, 0, 1000 );
 			} // End of customisation lambda function
 		) // End of REGISTER_TRIGGER_AND_CUSTOMISE macro call
 
