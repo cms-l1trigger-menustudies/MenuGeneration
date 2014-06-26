@@ -190,7 +190,7 @@ std::unique_ptr<l1menu::IMenuRate> l1menu::scalings::MCDataScaling::scale( const
 		std::pair<float,float> primaryThresholdErrors;
 		try
 		{
-			primaryThresholdErrors=scaledTriggerRatePlot.findThresholdError( scaledThreshold );
+			primaryThresholdErrors=scaledTriggerRatePlot.findThresholdError( scaledThreshold, pUnscaledTriggerRate->rate() );
 			thresholdErrors[scaledTriggerRatePlot.versusParameter()]=primaryThresholdErrors;
 		}
 		catch( std::runtime_error& exception )

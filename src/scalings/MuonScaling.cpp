@@ -196,7 +196,7 @@ std::unique_ptr<l1menu::IMenuRate> l1menu::scalings::MuonScaling::scale( const l
 			// as the unscaled threshold.
 			float scaledThreshold=pScaledTriggerRatePlot->findThreshold( pUnscaledTriggerRate->rate() );
 			// Also add the threshold errors.
-			std::pair<float,float> primaryThresholdErrors=pScaledTriggerRatePlot->findThresholdError( scaledThreshold );
+			std::pair<float,float> primaryThresholdErrors=pScaledTriggerRatePlot->findThresholdError( scaledThreshold, pUnscaledTriggerRate->rate()  );
 			parameterErrors[pScaledTriggerRatePlot->versusParameter()]=primaryThresholdErrors;
 
 			// Then modify the thresholds on the trigger

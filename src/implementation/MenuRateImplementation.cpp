@@ -131,7 +131,7 @@ l1menu::implementation::MenuRateImplementation::MenuRateImplementation( const l1
 			try
 			{
 				std::string mainThresholdName=pRatePlot->versusParameter();
-				std::pair<float,float> primaryThresholdErrors=pRatePlot->findThresholdError( triggerRate.trigger().parameter(mainThresholdName) );
+				std::pair<float,float> primaryThresholdErrors=pRatePlot->findThresholdError( triggerRate.trigger().parameter(mainThresholdName), triggerRate.rate() );
 				triggerRate.setParameterErrors( mainThresholdName, primaryThresholdErrors.first, primaryThresholdErrors.second );
 			}
 			catch( std::runtime_error& exception )
