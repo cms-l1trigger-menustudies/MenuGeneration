@@ -441,6 +441,7 @@ void l1menu::FullSamplePrivateMembers::fillDataStructure( int selectDataInput )
 			{
 				analysisDataFormat.BxTkem.push_back( inputNtuple.l1upgrade_->tkEMBx.at(i) );    
 				analysisDataFormat.EtTkem.push_back( inputNtuple.l1upgrade_->tkEMEt.at( i ) );
+				analysisDataFormat.tIsoTkem.push_back( inputNtuple.l1upgrade_->tkEMTrkIso.at( i ) );
 				analysisDataFormat.PhiTkem.push_back( phiINjetCoord( inputNtuple.l1upgrade_->tkEMPhi.at( i ) ) ); //PROBLEM: real value, trigger wants bin convert with phiINjetCoord
 				analysisDataFormat.EtaTkem.push_back( etaINjetCoord( inputNtuple.l1upgrade_->tkEMEta.at( i ) ) ); //PROBLEM: real value, trigger wants bin convert with etaINjetCoord
 				analysisDataFormat.NTkem++;

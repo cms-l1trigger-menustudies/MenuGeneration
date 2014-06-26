@@ -28,6 +28,7 @@ namespace l1menu
 			} // End of customisation lambda function
 		) // End of REGISTER_TRIGGER_AND_CUSTOMISE macro call
 		REGISTER_TRIGGER( DoubleTkMu_v0 )
+                
 
 	} // end of namespace triggers
 
@@ -72,7 +73,6 @@ unsigned int l1menu::triggers::DoubleTkMu_v0::version() const
 {
 	return 0;
 }
-
 
 bool l1menu::triggers::DoubleTkMu_v1::apply( const l1menu::L1TriggerDPGEvent& event ) const
 {

@@ -58,7 +58,8 @@ bool l1menu::triggers::SingleTkEMEta_v0::apply( const l1menu::L1TriggerDPGEvent&
 		float eta = analysisDataFormat.EtaTkem[ue];
 		if (eta < regionCut_ || eta > 21.-regionCut_) continue;  // eta = 5 - 16
 		float pt = analysisDataFormat.EtTkem[ue];    // the rank of the electron
-		if (pt >= threshold1_) ok = true;
+		float tkI= analysisDataFormat.tIsoTkem[ue];
+		if (pt >= threshold1_ && tkI<tkIsoCut_) ok = true;
 	}  // end loop over EM objects
 
 	return ok;
@@ -75,7 +76,7 @@ unsigned int l1menu::triggers::SingleTkEMEta_v0::version() const
 }
 
 l1menu::triggers::SingleTkEMEta::SingleTkEMEta()
-	: threshold1_(20), regionCut_(4.5)
+	: threshold1_(20), regionCut_(4.5), tkIsoCut_(999.)
 {
 	// No operation other than the initialiser list
 }
@@ -90,6 +91,7 @@ const std::vector<std::string> l1menu::triggers::SingleTkEMEta::parameterNames()
 	std::vector<std::string> returnValue;
 	returnValue.push_back("threshold1");
 	returnValue.push_back("regionCut");
+	returnValue.push_back("trkIsolCut");
 	return returnValue;
 }
 
@@ -97,6 +99,7 @@ float& l1menu::triggers::SingleTkEMEta::parameter( const std::string& parameterN
 {
 	if( parameterName=="threshold1" ) return threshold1_;
 	else if( parameterName=="regionCut" ) return regionCut_;
+	else if( parameterName=="trkIsolCut" ) return tkIsoCut_;
 	else throw std::logic_error( "Not a valid parameter name" );
 }
 
@@ -104,5 +107,6 @@ const float& l1menu::triggers::SingleTkEMEta::parameter( const std::string& para
 {
 	if( parameterName=="threshold1" ) return threshold1_;
 	else if( parameterName=="regionCut" ) return regionCut_;
+	else if( parameterName=="trkIsolCut" ) return tkIsoCut_;
 	else throw std::logic_error( "Not a valid parameter name" );
 }

@@ -40,6 +40,7 @@ namespace l1menu
 			float leg2threshold1_;
 			float leg1regionCut_;
 			float leg2regionCut_;
+			float trkIsolCut_;
 		}; // end of the TkEle_EG base class
 
 
@@ -122,6 +123,8 @@ bool l1menu::triggers::TkEle_EG_v0::apply( const l1menu::L1TriggerDPGEvent& even
 		float eta = analysisDataFormat.EtaTkel[ue];
 		if (eta < leg1regionCut_ || eta > 21.-leg1regionCut_) continue;  // eta = 5 - 16
 		float rank = analysisDataFormat.EtTkel[ue];    // the rank of the electron
+		float tkI= analysisDataFormat.tIsoTkel[ue];
+		if(tkI>trkIsolCut_) continue;
 		float pt = rank ;
 		if (pt >= leg1threshold1_){
 
@@ -176,8 +179,10 @@ bool l1menu::triggers::TkEle_EG_v1::apply( const l1menu::L1TriggerDPGEvent& even
 		if (bx != 0 ) continue;
 		float eta = analysisDataFormat.EtaTkel2[ue];
 		if (eta < leg1regionCut_ || eta > 21.-leg1regionCut_) continue;  // eta = 5 - 16
-		float rank = analysisDataFormat.EtTkel2[ue];    // the rank of the electron
-		float pt = rank ;
+		float tkI= analysisDataFormat.tIsoTkel2[ue];
+		if(tkI>trkIsolCut_) continue;
+		
+		float pt = analysisDataFormat.EtTkel2[ue];
 		if (pt >= leg1threshold1_){
 
                         
@@ -213,7 +218,7 @@ unsigned int l1menu::triggers::TkEle_EG_v1::version() const
 
 
 l1menu::triggers::TkEle_EG::TkEle_EG()
-	: leg1threshold1_(20), leg2threshold1_(20), leg1regionCut_(4.5), leg2regionCut_(4.5)
+	: leg1threshold1_(20), leg2threshold1_(20), leg1regionCut_(4.5), leg2regionCut_(4.5), trkIsolCut_(999.)
 {
 	// No operation other than the initialiser list
 }
@@ -230,6 +235,7 @@ const std::vector<std::string> l1menu::triggers::TkEle_EG::parameterNames() cons
 	returnValue.push_back("leg1regionCut");
 	returnValue.push_back("leg2threshold1");
 	returnValue.push_back("leg2regionCut");
+	returnValue.push_back("trkIsolCut");
 	return returnValue;
 }
 
@@ -239,6 +245,7 @@ float& l1menu::triggers::TkEle_EG::parameter( const std::string& parameterName )
 	else if( parameterName=="leg1regionCut" ) return leg1regionCut_;
 	else if( parameterName=="leg2threshold1" ) return leg2threshold1_;
 	else if( parameterName=="leg2regionCut" ) return leg2regionCut_;
+	else if( parameterName=="trkIsolCut" ) return trkIsolCut_;
 	else throw std::logic_error( "Not a valid parameter name" );
 }
 
@@ -248,5 +255,6 @@ const float& l1menu::triggers::TkEle_EG::parameter( const std::string& parameter
 	else if( parameterName=="leg1regionCut" ) return leg1regionCut_;
 	else if( parameterName=="leg2threshold1" ) return leg2threshold1_;
 	else if( parameterName=="leg2regionCut" ) return leg2regionCut_;
+	else if( parameterName=="trkIsolCut" ) return trkIsolCut_;
 	else throw std::logic_error( "Not a valid parameter name" );
 }

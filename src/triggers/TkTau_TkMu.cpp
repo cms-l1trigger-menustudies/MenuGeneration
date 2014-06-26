@@ -14,7 +14,7 @@ namespace l1menu
 {
 	namespace triggers
 	{
-		/** @brief Base class for all versions of the TkEle_Tau trigger.
+		/** @brief Base class for all versions of the TkTau_TkMu trigger.
 		 *
 		 * Note that this class is abstract because it doesn't implement the "version"
 		 * and "apply" methods. That's left up to the implementations of the different
@@ -27,10 +27,10 @@ namespace l1menu
 		 * @author Mark Grimes (mark.grimes@bristol.ac.uk)
 		 * @date 02/Jun/2013
 		 */
-		class TkEle_Tau : public l1menu::ITrigger
+		class TkTau_TkMu : public l1menu::ITrigger
 		{
 		public:
-			TkEle_Tau();
+			TkTau_TkMu();
 
 			virtual const std::string name() const;
 			virtual const std::vector<std::string> parameterNames() const;
@@ -38,19 +38,20 @@ namespace l1menu
 			virtual const float& parameter( const std::string& parameterName ) const;
 		protected:
 			float leg1threshold1_;
-			float leg2threshold1_;
 			float leg1regionCut_;
-			float leg2regionCut_;
-			float trkIsolCut_;
-		}; // end of the TkEle_Tau base class
+			float leg2threshold1_;
+			float etaCut_;
+			float muonQuality_;
+			float zVtxCut_;
+		}; // end of the TkTau_TkMu base class
 
 
-		/** @brief First version of the TkEle_Tau trigger.
+		/** @brief First version of the TkTau_TkMu trigger.
 		 *
 		 * @author probably Brian Winer
 		 * @date sometime
 		 */
-		class TkEle_Tau_v0 : public TkEle_Tau
+		class TkTau_TkMu_v1 : public TkTau_TkMu
 		{
 		public:
 			virtual unsigned int version() const;
@@ -58,18 +59,19 @@ namespace l1menu
 			virtual bool thresholdsAreCorrelated() const;
 		}; // end of version 0 class
 
-		/** @brief Second version of the TkEle_Tau trigger.
-		 *                 --> Used Second TkEle Collection with lower Pt cut
+		/** @brief First version of the TkTau_TkMu trigger.
+		 *
 		 * @author probably Brian Winer
 		 * @date sometime
 		 */
-		class TkEle_Tau_v1 : public TkEle_Tau
+		class TkTau_TkMu_v0 : public TkTau_TkMu
 		{
 		public:
 			virtual unsigned int version() const;
 			virtual bool apply( const l1menu::L1TriggerDPGEvent& event ) const;
 			virtual bool thresholdsAreCorrelated() const;
-		}; // end of version 1 class
+		}; // end of version 0 class
+
 
 
 		/* The REGISTER_TRIGGER macro will make sure that the given trigger is registered in the
@@ -79,17 +81,16 @@ namespace l1menu
 		 * at program startup. The function takes no parameters and returns void. In this case I'm
 		 * giving it a lambda function.
 		 */
-		REGISTER_TRIGGER_AND_CUSTOMISE( TkEle_Tau_v1,
+		REGISTER_TRIGGER_AND_CUSTOMISE( TkTau_TkMu_v1,
 			[]() // Use a lambda function to customise rather than creating a named function that never gets used again.
 			{
 				l1menu::TriggerTable& triggerTable=l1menu::TriggerTable::instance();
-				TkEle_Tau_v1 tempTriggerInstance;
+				TkTau_TkMu_v1 tempTriggerInstance;
 				triggerTable.registerSuggestedBinning( tempTriggerInstance.name(), "leg1threshold1", 100, 0, 100 );
 				triggerTable.registerSuggestedBinning( tempTriggerInstance.name(), "leg2threshold1", 100, 0, 100 );
 			} // End of customisation lambda function
 		) // End of REGISTER_TRIGGER_AND_CUSTOMISE macro call
-		REGISTER_TRIGGER( TkEle_Tau_v0 )
-
+		REGISTER_TRIGGER( TkTau_TkMu_v0 )
 
 
 	} // end of namespace triggers
@@ -105,7 +106,7 @@ namespace l1menu
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
 
-bool l1menu::triggers::TkEle_Tau_v0::apply( const l1menu::L1TriggerDPGEvent& event ) const
+bool l1menu::triggers::TkTau_TkMu_v0::apply( const l1menu::L1TriggerDPGEvent& event ) const
 {
 	const L1Analysis::L1AnalysisDataFormat& analysisDataFormat=event.rawEvent();
 	const bool* PhysicsBits=event.physicsBits();
@@ -115,103 +116,33 @@ bool l1menu::triggers::TkEle_Tau_v0::apply( const l1menu::L1TriggerDPGEvent& eve
 
 	bool ok = false;
 
-	int NTkele=analysisDataFormat.NTkele;
-	int Nj=analysisDataFormat.Njet;
+	int NTktau=analysisDataFormat.NTktau;
+	int NTkmu=analysisDataFormat.NTkmu;
 	
-	for( int ie=0; ie<NTkele; ie++ )
+	for( int itau=0; itau<NTktau; itau++ )
 	{
-
-		int bx=analysisDataFormat.BxTkel.at( ie );
+		int bx=analysisDataFormat.BxTktau.at( itau );
 		if( bx!=0 ) continue;
-		float pt = analysisDataFormat.EtTkel.at( ie );
-		float eta = analysisDataFormat.EtaTkel[ie];
+		float pt=analysisDataFormat.EtTktau.at( itau );
+		float eta = analysisDataFormat.EtaTktau[itau];
 		if (eta < leg1regionCut_ || eta > 21.-leg1regionCut_) continue;  // eta = 5 - 16  // eta = 5 - 16
-		float tkI= analysisDataFormat.tIsoTkel[ie];
-		if(tkI>trkIsolCut_) continue;
-
-		if( pt>=leg1threshold1_ ) {
-
-			for (int ut=0; ut < Nj; ut++) {
-				int bx = analysisDataFormat.Bxjet[ut];
-				if (bx != 0) continue;
-				bool isTauJet = analysisDataFormat.Taujet[ut];
-				if (! isTauJet) continue;
-				float pt2 = analysisDataFormat.Etjet[ut];    // the rank of the electron
-				float eta2 = analysisDataFormat.Etajet[ut];
-				if (eta2 < leg2regionCut_ || eta2 > 21.-leg2regionCut_) continue;  // eta = 5 - 16  // eta = 5 - 16
-
-                                //remove overlap with simple delta R for now.
-                                float delEta = fabs(analysisDataFormat.Etajet[ut]-analysisDataFormat.EtaTkel[ie]);
-				float delPhi = fabs(analysisDataFormat.Phijet[ut]-analysisDataFormat.PhiTkel[ie]);
-				if(delPhi>TMath::Pi()) delPhi = TMath::TwoPi() - delPhi;
-				float delR = sqrt(delEta*delEta + delPhi*delPhi);
-
-				if (pt2 >= leg2threshold1_ && delR>0.5) ok = true;
-			}
-                } 
-		
-	}
-
-	
-	return ok;
-}
-
-
-
-bool l1menu::triggers::TkEle_Tau_v0::thresholdsAreCorrelated() const
-{
-	return true;
-}
-
-unsigned int l1menu::triggers::TkEle_Tau_v0::version() const
-{
-	return 0;
-}
-
-bool l1menu::triggers::TkEle_Tau_v1::apply( const l1menu::L1TriggerDPGEvent& event ) const
-{
-	const L1Analysis::L1AnalysisDataFormat& analysisDataFormat=event.rawEvent();
-	const bool* PhysicsBits=event.physicsBits();
-
-	bool raw=PhysicsBits[0]; // ZeroBias
-	if( !raw ) return false;
-
-	bool ok = false;
-
-	int NTkele=analysisDataFormat.NTkele2;
-	int Nj=analysisDataFormat.Njet;
-	
-	for( int ie=0; ie<NTkele; ie++ )
-	{
-
-		int bx=analysisDataFormat.BxTkel2.at( ie );
-		if( bx!=0 ) continue;
-		float pt = analysisDataFormat.EtTkel2.at( ie );
-		float eta = analysisDataFormat.EtaTkel2[ie];
-		if (eta < leg1regionCut_ || eta > 21.-leg1regionCut_) continue;  // eta = 5 - 16  // eta = 5 - 16
-		float tkI= analysisDataFormat.tIsoTkel2[ie];
-		if(tkI>trkIsolCut_) continue;
 
 		if( pt>=leg1threshold1_ ) {
 		  
 
-			for (int ut=0; ut < Nj; ut++) {
-				int bx = analysisDataFormat.Bxjet[ut];
-				if (bx != 0) continue;
-				bool isTauJet = analysisDataFormat.Taujet[ut];
-				if (! isTauJet) continue;
-				float pt2 = analysisDataFormat.Etjet[ut];    // the rank of the electron
-				float eta2 = analysisDataFormat.Etajet[ut];
-				if (eta2 < leg2regionCut_ || eta2 > 21.-leg2regionCut_) continue;  // eta = 5 - 16  // eta = 5 - 16
+		     for( int imu=0; imu<NTkmu; imu++ )
+		     {
+			     int bx2=analysisDataFormat.BxTkmu.at( imu );
+			     if( bx2!=0 ) continue;
+			     float pt2=analysisDataFormat.PtTkmu.at( imu );
+			     float eta2=analysisDataFormat.Etamu.at( imu ); // Commented out to stop unused variable compile warning
+			     if (std::fabs(eta2) > etaCut_) continue;
+			     int qual=analysisDataFormat.QualTkmu.at( imu );
+			     if( qual<muonQuality_ ) continue;
+			     
 
-                                //remove overlap with simple delta R for now.
-                                float delEta = fabs(analysisDataFormat.Etajet[ut]-analysisDataFormat.EtaTkel2[ie]);
-				float delPhi = fabs(analysisDataFormat.Phijet[ut]-analysisDataFormat.PhiTkel2[ie]);
-				if(delPhi>TMath::Pi()) delPhi = TMath::TwoPi() - delPhi;
-				float delR = sqrt(delEta*delEta + delPhi*delPhi);
-
-				if (pt2 >= leg2threshold1_ && delR>0.5) ok = true;
-			}
+			     if (pt2 >= leg2threshold1_) ok = true;
+		     }
                 } 
 		
 	}
@@ -222,56 +153,120 @@ bool l1menu::triggers::TkEle_Tau_v1::apply( const l1menu::L1TriggerDPGEvent& eve
 
 
 
-bool l1menu::triggers::TkEle_Tau_v1::thresholdsAreCorrelated() const
+bool l1menu::triggers::TkTau_TkMu_v0::thresholdsAreCorrelated() const
 {
 	return true;
 }
 
-unsigned int l1menu::triggers::TkEle_Tau_v1::version() const
+unsigned int l1menu::triggers::TkTau_TkMu_v0::version() const
+{
+	return 0;
+}
+
+
+bool l1menu::triggers::TkTau_TkMu_v1::apply( const l1menu::L1TriggerDPGEvent& event ) const
+{
+	const L1Analysis::L1AnalysisDataFormat& analysisDataFormat=event.rawEvent();
+	const bool* PhysicsBits=event.physicsBits();
+
+	bool raw=PhysicsBits[0]; // ZeroBias
+	if( !raw ) return false;
+
+	bool ok = false;
+
+	int NTktau=analysisDataFormat.NTktau;
+	int NTkmu=analysisDataFormat.NTkmu;
+	
+	for( int itau=0; itau<NTktau; itau++ )
+	{
+		int bx=analysisDataFormat.BxTktau.at( itau );
+		if( bx!=0 ) continue;
+		float pt=analysisDataFormat.EtTktau.at( itau );
+		float eta = analysisDataFormat.EtaTktau[itau];
+		if (eta < leg1regionCut_ || eta > 21.-leg1regionCut_) continue;  // eta = 5 - 16  // eta = 5 - 16
+
+		if( pt>=leg1threshold1_ ) {
+		   
+		     float tauZvtx = analysisDataFormat.zVtxTktau[itau];
+
+		     for( int imu=0; imu<NTkmu; imu++ )
+		     {
+		        if(fabs(tauZvtx - analysisDataFormat.zVtxTkmu[imu]) < zVtxCut_)  {
+			     int bx2=analysisDataFormat.BxTkmu.at( imu );
+			     if( bx2!=0 ) continue;
+			     float pt2=analysisDataFormat.PtTkmu.at( imu );
+			     float eta2=analysisDataFormat.Etamu.at( imu ); // Commented out to stop unused variable compile warning
+			     if (std::fabs(eta2) > etaCut_) continue;
+			     int qual=analysisDataFormat.QualTkmu.at( imu );
+			     if( qual<muonQuality_ ) continue;
+			     
+
+			     if (pt2 >= leg2threshold1_) ok = true;
+			 }    
+		     }
+                } 
+		
+	}
+
+	
+	return ok;
+}
+
+
+
+bool l1menu::triggers::TkTau_TkMu_v1::thresholdsAreCorrelated() const
+{
+	return true;
+}
+
+unsigned int l1menu::triggers::TkTau_TkMu_v1::version() const
 {
 	return 1;
 }
 
 
-
-l1menu::triggers::TkEle_Tau::TkEle_Tau()
-	: leg1threshold1_(20), leg2threshold1_(20), leg1regionCut_(4.5), leg2regionCut_(4.5), trkIsolCut_(999.) 
+l1menu::triggers::TkTau_TkMu::TkTau_TkMu()
+	: leg1threshold1_(20), leg1regionCut_(4.5), leg2threshold1_(20), etaCut_(5.0), muonQuality_(4), zVtxCut_(1.0)   
 {
 	// No operation other than the initialiser list
 }
 
-const std::string l1menu::triggers::TkEle_Tau::name() const
+const std::string l1menu::triggers::TkTau_TkMu::name() const
 {
-	return "L1_TkEle_Tau";
+	return "L1_TkTau_TkMu";
 }
 
-const std::vector<std::string> l1menu::triggers::TkEle_Tau::parameterNames() const
+const std::vector<std::string> l1menu::triggers::TkTau_TkMu::parameterNames() const
 {
 	std::vector<std::string> returnValue;
 	returnValue.push_back("leg1threshold1");
-	returnValue.push_back("leg2threshold1");
 	returnValue.push_back("leg1regionCut");
-	returnValue.push_back("leg2regionCut");
-	returnValue.push_back("trkIsolCut");
+	returnValue.push_back("leg2threshold1");	
+	returnValue.push_back("etaCut");
+	returnValue.push_back("muonQuality");
+        returnValue.push_back("zVtxCut");
+	 
 	return returnValue;
 }
 
-float& l1menu::triggers::TkEle_Tau::parameter( const std::string& parameterName )
+float& l1menu::triggers::TkTau_TkMu::parameter( const std::string& parameterName )
 {
 	if( parameterName=="leg1threshold1" ) return leg1threshold1_;
 	else if( parameterName=="leg2threshold1" ) return leg2threshold1_;
 	else if( parameterName=="leg1regionCut" ) return leg1regionCut_;
-	else if( parameterName=="leg2regionCut" ) return leg2regionCut_;
-	else if( parameterName=="trkIsolCut" ) return trkIsolCut_;		
+	else if( parameterName=="etaCut" ) return etaCut_;
+	else if( parameterName=="muonQuality" ) return muonQuality_;
+	else if( parameterName=="zVtxCut" ) return zVtxCut_;		
 	else throw std::logic_error( "Not a valid parameter name" );
 }
 
-const float& l1menu::triggers::TkEle_Tau::parameter( const std::string& parameterName ) const
+const float& l1menu::triggers::TkTau_TkMu::parameter( const std::string& parameterName ) const
 {
 	if( parameterName=="leg1threshold1" ) return leg1threshold1_;
 	else if( parameterName=="leg2threshold1" ) return leg2threshold1_;
 	else if( parameterName=="leg1regionCut" ) return leg1regionCut_;
-	else if( parameterName=="leg2regionCut" ) return leg2regionCut_;
-	else if( parameterName=="trkIsolCut" ) return trkIsolCut_;		
+	else if( parameterName=="etaCut" ) return etaCut_;
+	else if( parameterName=="muonQuality" ) return muonQuality_;
+	else if( parameterName=="zVtxCut" ) return zVtxCut_;		
 	else throw std::logic_error( "Not a valid parameter name" );
 }

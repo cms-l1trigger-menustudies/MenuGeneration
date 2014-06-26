@@ -38,6 +38,7 @@ namespace l1menu
 		protected:
 			float threshold1_;
 			float regionCut_;
+			float tkIsoCut_;
 		}; // end of the SingleTkEMEta base class
 
 		/** @brief First version of the SingleTkEMEta trigger.

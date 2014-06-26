@@ -349,6 +349,10 @@ bool l1menu::TriggerRatePlot::triggerMatches( const l1menu::ITriggerDescription&
 
 float l1menu::TriggerRatePlot::findThreshold( float targetRate ) const
 {
+
+        bool prt=false;
+	if(strcmp(pHistogram_->GetName(),"L1_SingleMu_v_threshold1")==0 ) prt=true;
+	if(prt) printf("FINDThreshold: Found trigger to debug %s  with target rate %f \n",pHistogram_->GetName(), targetRate);
 	//
 	// Loop over all of the bins in the plot and find the first one
 	// that is less than the requested rate.
@@ -367,6 +371,8 @@ float l1menu::TriggerRatePlot::findThreshold( float targetRate ) const
 	// the bins it uses actually exist.
 	if( binNumber<3 ) binNumber=3;
 
+        if(prt) printf("Using bin number %i\n",binNumber);
+	
 	// I now have the bin number of the bin after the point I'm looking
 	// for. Now do a linear fit to interpolate between the bins using the
 	// two bins for the point and the two after.
@@ -390,7 +396,8 @@ float l1menu::TriggerRatePlot::findThreshold( float targetRate ) const
 	double slope=slopeAndIntercept.first;
 	double intercept=slopeAndIntercept.second;
 
-
+        if(prt) printf("slope and intercept %f %f \n",slope,intercept);
+	  
 	const double zeroEqualityWithTolerance=std::pow(10,-4);
 	if( std::fabs(slope)<zeroEqualityWithTolerance ) // see if the slope==0 within a little tolerance
 	{
@@ -400,6 +407,7 @@ float l1menu::TriggerRatePlot::findThreshold( float targetRate ) const
 		// case I'll just come back along the plot and return the value for the lowest bin, i.e. the lowest
 		// threshold for this particular "step".
 		while( binNumber>1 && pHistogram_->GetBinContent(binNumber)==pHistogram_->GetBinContent(binNumber-1) ) --binNumber;
+		if(prt) printf("Slope too small returning lower edge of bin %i \n",binNumber);
 		return pHistogram_->GetBinLowEdge(binNumber);
 	}
 	else
@@ -411,9 +419,13 @@ float l1menu::TriggerRatePlot::findThreshold( float targetRate ) const
 		// the two. This can happen at points of inflection. Also need to make sure the newThreshold is
 		// on the histogram.
 		int newThresholdBin=pHistogram_->FindBin(newThreshold);
+		
+		if(prt) printf("New Thr %f  New Bin %i \n",newThreshold,newThresholdBin);
+		
 		// Make sure it's not the under or overflow bin, and that it's arbitrarily close to the original bin.
-		if( std::abs(binNumber-newThresholdBin)>4 || newThresholdBin==0 || newThresholdBin==pHistogram_->GetNbinsX()+1 )
+		if( std::abs(binNumber-newThresholdBin)>-1 || newThresholdBin==0 || newThresholdBin==pHistogram_->GetNbinsX()+1 )
 		{
+		        if(prt) printf("Revaluation using fit to just two bins base binNumber %i\n",binNumber);
 			dataPoints.clear();
 			dataPoints.push_back( std::make_pair( pHistogram_->GetBinLowEdge(binNumber-1), pHistogram_->GetBinContent(binNumber-1) ) );
 			dataPoints.push_back( std::make_pair( pHistogram_->GetBinLowEdge(binNumber), pHistogram_->GetBinContent(binNumber) ) );
@@ -425,9 +437,14 @@ float l1menu::TriggerRatePlot::findThreshold( float targetRate ) const
 				// than 3, so I need to check I'm still on the first bin lower than the requested rate.
 				while( binNumber>1 && pHistogram_->GetBinContent(binNumber)<targetRate ) --binNumber;
 				newThreshold=pHistogram_->GetBinLowEdge(binNumber);
+				if(prt) printf("Slope too small returning lower edge of bin %i \n",binNumber);
 			}
 			else newThreshold=(targetRate-slopeAndIntercept.second)/slopeAndIntercept.first;
+			if(prt) printf("Revaluation: New Thr %f  \n",newThreshold);
 		}
+		if(prt) printf("Final thres %f \n",newThreshold); 
+		//newThreshold = pHistogram_->GetBinLowEdge(pHistogram_->FindBin(newThreshold));
+		if(prt) printf("Return Bin Edge: New Thr %f   \n",newThreshold);
 		if( newThreshold<0 ) return 0; // Apply some sanity checks
 		// Do I want to extrapolate out past where the histogram goes? Not sure. I won't for the time being.
 		else if( newThreshold>pHistogram_->GetXaxis()->GetXmax() ) return pHistogram_->GetXaxis()->GetXmax();
@@ -435,22 +452,46 @@ float l1menu::TriggerRatePlot::findThreshold( float targetRate ) const
 	}
 }
 
-std::pair<float,float> l1menu::TriggerRatePlot::findThresholdError( float threshold ) const
+std::pair<float,float> l1menu::TriggerRatePlot::findThresholdError( float threshold, float rate ) const
 {
+
+        bool prt=false;
+	if(strcmp(pHistogram_->GetName(),"L1_SingleMu_v_threshold1")==0 ) prt=true;
+	if(prt) printf("FindError: Found trigger to debug %s with threshold %f and rate %f\n",pHistogram_->GetName(),threshold,rate);
+
 	int binNumber=pHistogram_->FindFixBin(threshold);
 	// If the bin is the under or overflow bin then there's not much I can do.
 	if( binNumber==0 || binNumber==pHistogram_->GetNbinsX()+1 )
 		throw std::runtime_error("TriggerRatePlot::findThresholdError was called with a threshold not on the histogram "\
 				"(threshold="+std::to_string(threshold)+" title="+pHistogram_->GetTitle()+")" );
 
-	float rate=pHistogram_->GetBinContent(binNumber);
-
-	int lowestMatchingBin=binNumber;
+	//float rate=pHistogram_->GetBinContent(binNumber);
+	
+	// Estimate rate with this threshold
+	float rl =pHistogram_->GetBinContent(binNumber);
+	float tl =pHistogram_->GetBinLowEdge(binNumber);
+	float rh =pHistogram_->GetBinContent(binNumber+1);
+	float th =pHistogram_->GetBinLowEdge(binNumber+1);
+	rate = (rl-rh)*(threshold-th)/(tl-th)+rh;
+	if(prt) printf("New Rate estimate %f \n",rate);
+	
+	float sysRate = 0.3;
+        if(prt) printf("----------------------------------------------\nTrigger: %s \n",pHistogram_->GetName());
+	int lowestMatchingBin=binNumber+1;
+	int binlowKeep = lowestMatchingBin;
 	while( lowestMatchingBin>1 )
 	{
 		// The online documentation says TH1 has GetBinErrorLow but it's giving me
 		// compiler errors. Must be a different version of Root.
-		if( pHistogram_->GetBinContent(lowestMatchingBin-1)-pHistogram_->GetBinError(lowestMatchingBin-1)>rate ) break;
+		if( (1.-sysRate)*(pHistogram_->GetBinContent(lowestMatchingBin-1)-pHistogram_->GetBinError(lowestMatchingBin-1))>rate ) {
+		  binlowKeep = lowestMatchingBin;
+		  while(lowestMatchingBin>1) {
+		     // Keep backing up for bins that are identical...dealing with muons
+		     if(pHistogram_->GetBinContent(lowestMatchingBin-1) != pHistogram_->GetBinContent(binlowKeep-1)) break;
+		     --lowestMatchingBin;
+		  }
+		   break;
+		}   
 		--lowestMatchingBin;
 	}
 	// Not sure what to do if I get the underflow bin. I'll just return
@@ -458,11 +499,11 @@ std::pair<float,float> l1menu::TriggerRatePlot::findThresholdError( float thresh
 	// bin number one. The condition on the while loop makes sure I'll
 	// get bin number one if the break is never hit.
 
-	int highestMatchingBin=binNumber;
+	int highestMatchingBin=binNumber-1;
 	while( highestMatchingBin<pHistogram_->GetNbinsX()+1 )
 	{
 		// Same thing for GetBinErrorUp - gives me compilation errors
-		if( pHistogram_->GetBinContent(highestMatchingBin)+pHistogram_->GetBinError(highestMatchingBin)<rate ) break;
+		if( (1.+sysRate)*(pHistogram_->GetBinContent(highestMatchingBin)+pHistogram_->GetBinError(highestMatchingBin))<rate ) break;
 		++highestMatchingBin;
 	}
 	// Again, don't know what to do if I get the overflow bin. I'll just
@@ -470,7 +511,27 @@ std::pair<float,float> l1menu::TriggerRatePlot::findThresholdError( float thresh
 	// overflow bin. The condition of the while loop should make sure I
 	// get the overflow bin if the break is never hit.
 
-	return std::make_pair( threshold-pHistogram_->GetBinLowEdge(lowestMatchingBin), pHistogram_->GetBinLowEdge(highestMatchingBin)-threshold );
+        //return std::make_pair( threshold-pHistogram_->GetBinLowEdge(lowestMatchingBin), pHistogram_->GetBinLowEdge(highestMatchingBin)-threshold );
+
+        // Let's try something more sophisticated with the errors.  Interpolate between bins to get a better estimate of the error.
+	float t1 = pHistogram_->GetBinLowEdge(binlowKeep);
+	float r1 = (1.-sysRate)*(pHistogram_->GetBinContent(binlowKeep)-pHistogram_->GetBinError(binlowKeep));
+	float t2 = pHistogram_->GetBinLowEdge(lowestMatchingBin-1);
+	float r2 = (1.-sysRate)*(pHistogram_->GetBinContent(lowestMatchingBin-1)-pHistogram_->GetBinError(lowestMatchingBin-1));
+	float lowThr = (rate-r1)*((t2-t1)/(r2-r1))+t1;
+	if(prt) printf("lowBin %i t1,r1 %f, %f  t2,r2 %f, %f lowThr %f \n",lowestMatchingBin, t1,r1, t2,r2, lowThr);
+
+	t1 = pHistogram_->GetBinLowEdge(highestMatchingBin);
+	r1 = (1.+sysRate)*(pHistogram_->GetBinContent(highestMatchingBin)+pHistogram_->GetBinError(highestMatchingBin));
+	t2 = pHistogram_->GetBinLowEdge(highestMatchingBin-1);
+	r2 = (1.+sysRate)*(pHistogram_->GetBinContent(highestMatchingBin-1)+pHistogram_->GetBinError(highestMatchingBin-1));
+	float highThr = (rate-r1)*((t2-t1)/(r2-r1))+t1;
+	if(prt) printf("highBin %i t1,r1 %f, %f  t2,r2 %f, %f lowThr %f \n",highestMatchingBin, t1,r1, t2,r2, highThr);
+
+	if(prt) printf("\n Rate %f  lowThrErr %f threshold %f  highThrErr %f\n",rate,threshold-lowThr,threshold,highThr-threshold);
+
+
+	return std::make_pair( threshold-lowThr, highThr-threshold );
 }
 
 TH1* l1menu::TriggerRatePlot::getPlot()

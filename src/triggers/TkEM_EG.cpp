@@ -40,6 +40,7 @@ namespace l1menu
 			float leg2threshold1_;
 			float leg1regionCut_;
 			float leg2regionCut_;
+			float tkIsoCut_;
 		}; // end of the TkEM_EG base class
 
 
@@ -108,7 +109,8 @@ bool l1menu::triggers::TkEM_EG_v0::apply( const l1menu::L1TriggerDPGEvent& event
 		float eta = analysisDataFormat.EtaTkem[ue];
 		if (eta < leg1regionCut_ || eta > 21.-leg1regionCut_) continue;  // eta = 5 - 16
 		float pt = analysisDataFormat.EtTkem[ue];    // the rank of the electron
-		if (pt >= leg1threshold1_){
+		float tkI= analysisDataFormat.tIsoTkem[ue];
+		if (pt >= leg1threshold1_ && tkI<tkIsoCut_){
 
                         
 			for (int uj=0; uj < Neg; uj++) {
@@ -142,7 +144,7 @@ unsigned int l1menu::triggers::TkEM_EG_v0::version() const
 }
 
 l1menu::triggers::TkEM_EG::TkEM_EG()
-	: leg1threshold1_(20), leg2threshold1_(20), leg1regionCut_(4.5), leg2regionCut_(4.5)
+	: leg1threshold1_(20), leg2threshold1_(20), leg1regionCut_(4.5), leg2regionCut_(4.5), tkIsoCut_(999.)
 {
 	// No operation other than the initialiser list
 }
@@ -159,6 +161,7 @@ const std::vector<std::string> l1menu::triggers::TkEM_EG::parameterNames() const
 	returnValue.push_back("leg1regionCut");
 	returnValue.push_back("leg2threshold1");
 	returnValue.push_back("leg2regionCut");
+	returnValue.push_back("trkIsolCut");
 	return returnValue;
 }
 
@@ -168,6 +171,7 @@ float& l1menu::triggers::TkEM_EG::parameter( const std::string& parameterName )
 	else if( parameterName=="leg1regionCut" ) return leg1regionCut_;
 	else if( parameterName=="leg2threshold1" ) return leg2threshold1_;
 	else if( parameterName=="leg2regionCut" ) return leg2regionCut_;
+	else if( parameterName=="trkIsolCut" ) return tkIsoCut_;
 	else throw std::logic_error( "Not a valid parameter name" );
 }
 
@@ -177,5 +181,6 @@ const float& l1menu::triggers::TkEM_EG::parameter( const std::string& parameterN
 	else if( parameterName=="leg1regionCut" ) return leg1regionCut_;
 	else if( parameterName=="leg2threshold1" ) return leg2threshold1_;
 	else if( parameterName=="leg2regionCut" ) return leg2regionCut_;
+	else if( parameterName=="trkIsolCut" ) return tkIsoCut_;
 	else throw std::logic_error( "Not a valid parameter name" );
 }
