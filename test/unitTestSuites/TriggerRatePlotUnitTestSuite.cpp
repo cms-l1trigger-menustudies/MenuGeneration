@@ -172,11 +172,13 @@ void TriggerRatePlotUnitTestSuite::testFindThresholdError()
 	//
 	l1menu::TriggerRatePlot& testTriggerRatePlot_=pRatePlotsFromDisk_->triggerRatePlots().front();
 	std::pair<float,float> thresholdErrors;
-	CPPUNIT_ASSERT_NO_THROW( thresholdErrors=testTriggerRatePlot_.findThresholdError( 50 ) );
+	// Brian added an extra parameter to findThresholdError, which I don't fully understand. It doesn't look as
+	// though it's used other than for a printout. For now I'll just pass -1.
+	CPPUNIT_ASSERT_NO_THROW( thresholdErrors=testTriggerRatePlot_.findThresholdError( 50, -1 ) );
 	// Although I can make sure it throws an exception if you get
 	// the underflow and overflow bins.
-	CPPUNIT_ASSERT_THROW( thresholdErrors=testTriggerRatePlot_.findThresholdError( -1 ), std::runtime_error );
-	CPPUNIT_ASSERT_THROW( thresholdErrors=testTriggerRatePlot_.findThresholdError( 99999999 ), std::runtime_error );
+	CPPUNIT_ASSERT_THROW( thresholdErrors=testTriggerRatePlot_.findThresholdError( -1, -1 ), std::runtime_error );
+	CPPUNIT_ASSERT_THROW( thresholdErrors=testTriggerRatePlot_.findThresholdError( 99999999, -1 ), std::runtime_error );
 }
 
 void TriggerRatePlotUnitTestSuite::testLowThresholdPlateau()
