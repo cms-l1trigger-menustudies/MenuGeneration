@@ -39,7 +39,7 @@ namespace menuwidgets
 		TriggerWidget( l1menu::ITrigger& trigger );
 		bool isEnabled() const;
 		const l1menu::ITriggerDescription& trigger() const;
-		void setRate( const l1menu::ITriggerRate* pRate );
+		void setRate( const l1menu::ITriggerRate* pRate, double totRate );
 	private slots:
 		void stateChanged( int state );
 		void thresholdChanged( double value );
@@ -164,7 +164,7 @@ const l1menu::ITriggerDescription& menuwidgets::TriggerWidget::trigger() const
 	return trigger_;
 }
 
-void menuwidgets::TriggerWidget::setRate( const l1menu::ITriggerRate* pRate )
+void menuwidgets::TriggerWidget::setRate( const l1menu::ITriggerRate* pRate, double totRate )
 {
 	//
 	// First perform a check to make sure this rate matches this trigger
@@ -173,6 +173,14 @@ void menuwidgets::TriggerWidget::setRate( const l1menu::ITriggerRate* pRate )
 
 	pRateLabel_->setText( (std::to_string(pRate->rate())/*+" +/-"+std::to_string(pRate->rateError())*/+" kHz").c_str() );
 	pPureRateLabel_->setText( (std::to_string(pRate->pureRate())/*+" +/-"+std::to_string(pRate->pureRateError())*/+" kHz").c_str() );
+
+	printf("%20s   %8.1f (%8.6f)",pRate->trigger().name().c_str(),pRate->rate(),pRate->rate()/totRate);
+	for( const auto& thresholdName : l1menu::tools::getThresholdNames(pRate->trigger()) )
+	{
+	   printf(" %5.1f ",pRate->trigger().parameter(thresholdName));
+        }
+	printf("\n");
+
 }
 
 void menuwidgets::TriggerWidget::stateChanged( int state )
@@ -294,18 +302,20 @@ void menuwidgets::MainWidget::calculateRates()
 	pTotalRateLabel_->setText( ("Total rate= "+std::to_string(pMenuRate->totalRate())+" +/- "+std::to_string(pMenuRate->totalRateError())+" kHz").c_str() );
 
 	// The trigger rates should be in the same order as the active trigger widgets
+	printf("\n===========================================================\n");
 	std::vector<const l1menu::ITriggerRate*>::const_iterator iTriggerRate=pMenuRate->triggerRates().begin();
 	for( const auto& pTriggerWidget : triggerWidgets_ )
 	{
 		if( pTriggerWidget->isEnabled() )
 		{
-			pTriggerWidget->setRate( *iTriggerRate );
+			pTriggerWidget->setRate( *iTriggerRate, pMenuRate->totalRate() );
 			++iTriggerRate;
 			if( iTriggerRate==pMenuRate->triggerRates().begin() ) break;
 		}
 	}
 
 	// Re-enable the button
+	printf(" Total Rate        %6.1f\n",pMenuRate->totalRate() );
 	pCalculateRateButton_->setDisabled(false);
 }
 
