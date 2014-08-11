@@ -117,7 +117,7 @@ namespace l1menu
 		 *
 		 * The high threshold error is the equivalent but higher.
 		 */
-		std::pair<float,float> findThresholdError( float threshold, float rate ) const;
+		std::pair<float,float> findThresholdError( float threshold, float rate = 1.0 ) const;
 
 		/** @brief Returns the internal pointer to the root histogram. Ownership is retained by TriggerRatePlot. */
 		TH1* getPlot();
