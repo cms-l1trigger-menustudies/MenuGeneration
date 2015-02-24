@@ -8,10 +8,10 @@ namespace l1menu
 	namespace triggers
 	{
 
-		/** @brief Cross trigger of the SingleIsoEGEta and HTM triggers.
+		/** @brief Cross trigger of the SingleEGEta and HTM triggers.
 		 *
 		 * Combines the following triggers: <br/>
-		 * L1_SingleIsoEG version 0 <br/>
+		 * L1_SingleEG version 0 <br/>
 		 * L1_HTM version 0 <br/>
 		 *
 		 * @author Individual triggers coded by Brian Winer, re-factored into a derived class of
@@ -26,6 +26,23 @@ namespace l1menu
 			virtual unsigned int version() const;
 		}; // end of version 0 class
 
+		/** @brief Cross trigger of the SingleEGEta and HTM triggers.
+		 *
+		 * Combines the following triggers: <br/>
+		 * L1_SingleEG version 0 <br/>
+		 * L1_HTM version 1 <br/>
+		 *
+		 * @author Individual triggers coded by Brian Winer, re-factored into a derived class of
+		 * CrossTrigger by Mark Grimes (mark.grimes@bristol.ac.uk).
+		 * @date 29/Mar/2014
+		 */
+		class EG_HTM_v1 : public l1menu::triggers::CrossTrigger
+		{
+		public:
+			EG_HTM_v1();
+			virtual const std::string name() const;
+			virtual unsigned int version() const;
+		}; // end of version 0 class
 
 		/* The REGISTER_TRIGGER macro will make sure that the given trigger is registered in the
 		 * l1menu::TriggerTable when the program starts. I also want to provide some suggested binning
@@ -44,12 +61,36 @@ namespace l1menu
 			} // End of customisation lambda function
 		) // End of REGISTER_TRIGGER_AND_CUSTOMISE macro call
 
+		// No need to register suggested binning, it will use the binning for version 0
+		REGISTER_TRIGGER( EG_HTM_v1 )
 
 	} // end of namespace triggers
 
 } // end of namespace l1menu
 
 
+//
+// Version 1
+//
+l1menu::triggers::EG_HTM_v1::EG_HTM_v1()
+	: CrossTrigger( new l1menu::triggers::SingleEGEta_v0, new l1menu::triggers::HTM_v1 )
+{
+	// No operation besides passing the sub-triggers onto the base class
+}
+
+const std::string l1menu::triggers::EG_HTM_v1::name() const
+{
+	return "L1_SingleEG_HTM";
+}
+
+unsigned int l1menu::triggers::EG_HTM_v1::version() const
+{
+	return 1;
+}
+
+//
+// Version 0
+//
 l1menu::triggers::EG_HTM_v0::EG_HTM_v0()
 	: CrossTrigger( new l1menu::triggers::SingleEGEta_v0, new l1menu::triggers::HTM_v0 )
 {

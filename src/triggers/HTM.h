@@ -52,6 +52,31 @@ namespace l1menu
 			virtual bool thresholdsAreCorrelated() const;
 		}; // end of version 0 class
 
+
+		/** @brief HTM trigger where the jets are looped over here rather than in FullSample.
+		 *
+		 * Allows eta cuts to be applied here, rather than having a hard coded eta cut in FullSample.
+		 * Also added a minimum pT value if the jet is to be used to calculate the vector sum.
+		 *
+		 * @author Mark Grimes, but just copied Brian's code from FullSample.cpp
+		 * @date 28/Mar/2014
+		 */
+		class HTM_v1 : public HTM
+		{
+		public:
+			HTM_v1(); // Need a constructor to initiate regionCut_
+			virtual unsigned int version() const;
+			virtual bool apply( const l1menu::L1TriggerDPGEvent& event ) const;
+			virtual bool thresholdsAreCorrelated() const;
+			// Also need to override these because I've added a parameter
+			virtual const std::vector<std::string> parameterNames() const;
+			virtual float& parameter( const std::string& parameterName );
+			virtual const float& parameter( const std::string& parameterName ) const;
+		protected:
+			float regionCut_;
+			float ptCut_;
+		}; // end of version 1 class
+
 	} // end of namespace triggers
 
 } // end of namespace l1menu

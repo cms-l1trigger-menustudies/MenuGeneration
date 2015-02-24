@@ -48,6 +48,29 @@ namespace l1menu
 			virtual bool thresholdsAreCorrelated() const;
 		}; // end of version 0 class
 
+		/** @brief HTT trigger where the jets are looped over here rather than in FullSample.
+		 *
+		 * Allows eta cuts to be applied here, rather than having a hard coded eta cut in FullSample.
+		 * Also added a minimum pT value if the jet is to be used to calculate the sum.
+		 *
+		 * @author Mark Grimes, but just copied Brian's code from FullSample.cpp
+		 * @date 28/Mar/2014
+		 */
+		class HTT_v1 : public HTT
+		{
+		public:
+			HTT_v1(); // Need a constructor to initiate regionCut_
+			virtual unsigned int version() const;
+			virtual bool apply( const l1menu::L1TriggerDPGEvent& event ) const;
+			virtual bool thresholdsAreCorrelated() const;
+			// Also need to override these because I've added a parameter
+			virtual const std::vector<std::string> parameterNames() const;
+			virtual float& parameter( const std::string& parameterName );
+			virtual const float& parameter( const std::string& parameterName ) const;
+		protected:
+			float regionCut_;
+			float ptCut_;
+		}; // end of version 1 class
 
 		/* The REGISTER_TRIGGER macro will make sure that the given trigger is registered in the
 		 * l1menu::TriggerTable when the program starts. I also want to provide some suggested binning
@@ -65,6 +88,9 @@ namespace l1menu
 			} // End of customisation lambda function
 		) // End of REGISTER_TRIGGER_AND_CUSTOMISE macro call
 
+		// No need to register suggested binning, it will use the binning for version 0
+		REGISTER_TRIGGER( HTT_v1 )
+
 
 	} // end of namespace triggers
 
@@ -80,6 +106,79 @@ namespace l1menu
 //----------------------------------------------------------------------------------------
 
 
+//
+//  Version 1
+//
+l1menu::triggers::HTT_v1::HTT_v1()
+	: regionCut_(4), ptCut_(0)
+{
+	// No operation besides the initialiser list
+}
+
+bool l1menu::triggers::HTT_v1::apply( const l1menu::L1TriggerDPGEvent& event ) const
+{
+	const L1Analysis::L1AnalysisDataFormat& analysisDataFormat=event.rawEvent();
+	const bool* PhysicsBits=event.physicsBits();
+
+	bool raw = PhysicsBits[0];   // ZeroBias
+	if (! raw) return false;
+
+	double httValue=0.;
+
+	// Calculate our own HT and HTM from the jets that survive the double jet removal.
+	for( int i=0; i<analysisDataFormat.Njet; i++ )
+	{
+		if( analysisDataFormat.Bxjet.at( i )==0 && !analysisDataFormat.Taujet.at(i) )
+		{
+			if( analysisDataFormat.Etajet.at( i )>=regionCut_ and analysisDataFormat.Etajet.at( i )<=(21-regionCut_) )
+			{
+				if( analysisDataFormat.Etjet[i]>=ptCut_ ) httValue+=analysisDataFormat.Etjet.at( i );
+			} //in proper eta range
+		} //correct beam crossing
+	} //loop over cleaned jets
+
+	if (httValue < threshold1_) return false;
+	return true;
+}
+
+bool l1menu::triggers::HTT_v1::thresholdsAreCorrelated() const
+{
+	return false;
+}
+
+unsigned int l1menu::triggers::HTT_v1::version() const
+{
+	return 1;
+}
+
+const std::vector<std::string> l1menu::triggers::HTT_v1::parameterNames() const
+{
+	// First get the values from the base class, then add the extra entries
+	std::vector<std::string> returnValue=HTT::parameterNames();
+	returnValue.push_back("regionCut");
+	returnValue.push_back("ptCut");
+	return returnValue;
+}
+
+float& l1menu::triggers::HTT_v1::parameter( const std::string& parameterName )
+{
+	// Check if it's the parameter I've added, otherwise defer to the base class
+	if( parameterName=="regionCut" ) return regionCut_;
+	if( parameterName=="ptCut" ) return ptCut_;
+	else return HTT::parameter(parameterName);
+}
+
+const float& l1menu::triggers::HTT_v1::parameter( const std::string& parameterName ) const
+{
+	// Check if it's the parameter I've added, otherwise defer to the base class
+	if( parameterName=="regionCut" ) return regionCut_;
+	if( parameterName=="ptCut" ) return ptCut_;
+	else return HTT::parameter(parameterName);
+}
+
+//
+//  Version 0
+//
 bool l1menu::triggers::HTT_v0::apply( const l1menu::L1TriggerDPGEvent& event ) const
 {
 	const L1Analysis::L1AnalysisDataFormat& analysisDataFormat=event.rawEvent();
